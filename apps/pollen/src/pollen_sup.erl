@@ -1,9 +1,9 @@
 %%%-------------------------------------------------------------------
-%% @doc minichat top level supervisor.
+%% @doc pollen top level supervisor.
 %% @end
 %%%-------------------------------------------------------------------
 
--module(minichat_sup).
+-module(pollen_sup).
 
 -behaviour(supervisor).
 

@@ -1,4 +1,4 @@
-minichat
+pollen
 =====
 
 An OTP application

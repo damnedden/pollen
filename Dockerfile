@@ -1,8 +1,8 @@
 FROM erlang:25-slim
 
 # Setup of initial working directories
-WORKDIR /var/www/minichat
+WORKDIR /var/www/pollen
 
-VOLUME /var/www/minichat
+VOLUME /var/www/pollen
 
-COPY . /var/www/minichat
+COPY . /var/www/pollen

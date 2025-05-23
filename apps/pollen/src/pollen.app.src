@@ -1,14 +1,14 @@
-{application, minichat, [
-    {description, "An OTP application"},
+{application, pollen, [
+    {description, "An OTP application for a simple-chat server."},
     {vsn, "0.1.0"},
     {registered, []},
-    {mod, {minichat_app, []}},
+    {mod, {pollen_app, []}},
     {applications, [
         kernel,
         stdlib
     ]},
     {env, []},
-    {modules, []},
+    {modules, [pollen_sup]},
     {licenses, ["Apache-2.0"]},
     {links, []}
  ]}.
