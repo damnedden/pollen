@@ -1,0 +1,14 @@
+{application, pollen_server, [
+    {description, "An OTP application for a simple-chat server, complete with a functional client."},
+    {vsn, "0.1.1"},
+    {registered, []},
+    {mod, {pollen_server_app, []}},
+    {applications, [
+        kernel,
+        stdlib
+    ]},
+    {env, []},
+    {modules, [pollen_server_sup]},
+    {licenses, ["Apache-2.0"]},
+    {links, []}
+ ]}.

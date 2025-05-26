@@ -1,6 +1,6 @@
--sname minichat
+-sname pollen
 
--setcookie minichat_cookie
+-setcookie pollen_cookie
 
 +K true
 +A30

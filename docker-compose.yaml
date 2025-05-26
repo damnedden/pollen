@@ -1,0 +1,12 @@
+# All services defined in our master contaienr
+services:
+  pollen-server:
+    image: ifiocco/image:pollen
+    container_name: pollen-server
+    cpus: 3
+    restart: on-failure:3
+    mem_limit: 2048m
+    mem_reservation: 512m
+    tty: true
+    volumes:
+      - .:/var/www/pollen

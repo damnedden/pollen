@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
--module(pollen_sup).
+-module(pollen_server_sup).
 
 -behaviour(supervisor).
 
@@ -31,7 +31,17 @@ init([]) ->
         intensity => 0,
         period => 1
     },
-    ChildSpecs = [],
+
+    PollenServer = #{
+        id => server,
+        start => {server, start_link, [4001]},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [server]
+    },
+
+    ChildSpecs = [PollenServer],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions
