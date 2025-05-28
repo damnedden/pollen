@@ -10,7 +10,7 @@
 -define(SERVER, ?MODULE).
 
 -export([start_link/1]).
--export([server/1, handle/1]).
+-export([server/1, handle/1, graceful_dconn/2]).
 
 %% Initial link called from supervisor
 start_link(Port) ->
@@ -34,6 +34,7 @@ server(ListenSock) ->
             env:verbose() andalso io:format("PollenServerModule: Accepting new connection.~n"),
 
             %% Spawn a new Pid to handle server side connection
+            inet:setopts(ClientSock, [{active, false}, {packet, 0}]),
             Pid = spawn(?MODULE, handle, [ClientSock]),
             gen_tcp:controlling_process(ListenSock, Pid),
 
@@ -44,9 +45,17 @@ server(ListenSock) ->
             ok
     end.
 
+%% Gracefully disconnect a client with a custom message
+graceful_dconn(Sock, Message) ->
+    case gen_tcp:send(Sock, Message) of
+        ok                  -> ok;
+        {error, _Reason}    -> io:format("Failed to send disconnection message.~n")
+    end,
+
+    gen_tcp:close(Sock).    
+
 %% Each client loops in its own process
 handle(Socket) ->
-    inet:setopts(Socket, [{active, false}, {packet, 0}]),
     case gen_tcp:recv(Socket, 0) of
         {ok, Data} ->
             Bin = term_to_binary(Data),
@@ -55,17 +64,18 @@ handle(Socket) ->
             %% Check the size of the packet
             if Size < ?MAX_PCK_SIZE ->
                 Request = binary_to_term(list_to_binary(Data)),
-                
-                %% Dispatch the request
+
+                %% Dispatch the request and loop for new data
                 router:dispatch(Request, Socket),
 
-                %% Loop socket to listen
                 handle(Socket);
             true ->
                 env:verbose() andalso io:format("PollenServerModule: Packet too large error (~wB).~n", [Size]),
                 gen_tcp:close(Socket)
             end;
-        {error, Reason} ->
+        {error, closed} ->
             env:verbose() andalso io:format("PollenServerModule: Client disconnected.~n"),
-            {ok, Reason}
+            exit(self()),
+            
+            ok
     end.

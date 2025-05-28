@@ -6,5 +6,5 @@
 verbose() ->
     case application:get_env(pollen, verbose) of
         {ok, 1} -> true;
-        _ -> false
+        _       -> false
     end.

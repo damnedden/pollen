@@ -1,0 +1,3 @@
+#!/bin/bash
+
+erl -sname pollen_client_1 -eval "p:main([\"localhost\",\"4000\",\"Bob\"])"

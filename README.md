@@ -8,4 +8,4 @@ Build
 
     $ rebar3 release
 
-Create a new release if you want to host your own server, by default a new server is hosted on localhost:4001
+Create a new release if you want to host your own server, by default a new server is hosted on localhost:4000

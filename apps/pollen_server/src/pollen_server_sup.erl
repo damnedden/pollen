@@ -34,7 +34,7 @@ init([]) ->
 
     PollenServer = #{
         id => server,
-        start => {server, start_link, [4001]},
+        start => {server, start_link, [4000]},
         restart => permanent,
         shutdown => 5000,
         type => worker,

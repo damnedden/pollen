@@ -1,0 +1,6 @@
+#!/bin/bash
+
+erlc client/utils.erl
+erlc client/p.erl
+
+# erl -sname pollen_client -eval "client:main([\"localhost\",\"4000\",\"Alice\"])"
