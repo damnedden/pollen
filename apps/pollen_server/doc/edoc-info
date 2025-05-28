@@ -1,0 +1,4 @@
+%% encoding: UTF-8
+{application,pollen_server}.
+{modules,[env,login,ping,pollen_server_app,pollen_server_sup,room,router,
+          server]}.

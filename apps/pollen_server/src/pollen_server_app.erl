@@ -10,6 +10,7 @@
 -export([start/2, stop/1]).
 
 start(_Type, _Args) ->
+    application:ensure_all_started(hackney),
     application:set_env(pollen, verbose, 1),
     pollen_server_sup:start_link().
 

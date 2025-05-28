@@ -3,7 +3,7 @@
 %% @end
 %%%-------------------------------------------------------------------
 
--module(server).
+-module(tcp).
 
 % Configuration
 -define(MAX_PCK_SIZE, 2000). %% 0.2mB
@@ -14,14 +14,15 @@
 
 %% Initial link called from supervisor
 start_link(Port) ->
+    io:format("Booting PollenTCPModule..."),
+
     case gen_tcp:listen(Port, [{active, false}, {packet, 0}, {reuseaddr, true}]) of
         {ok, ListenSock} ->
+            io:format("~20s~n~n", ["OK"]),
+
             Pid = spawn_link(?MODULE, server, [ListenSock]),
 
-            %% Create a new table for storing sessions
-            ets:new(pollen_sessions, [ordered_set, named_table]),
-
-            env:verbose() andalso io:format("PollenServerModule: Server started, listening on port ~w.~n", [Port]),
+            env:verbose() andalso io:format("PollenTCPModule: Server started, listening on port ~w.~n", [Port]),
             {ok, Pid};
         {error, Reason} ->
             {error, Reason}
@@ -31,7 +32,7 @@ start_link(Port) ->
 server(ListenSock) ->
     case gen_tcp:accept(ListenSock) of
         {ok, ClientSock} ->
-            env:verbose() andalso io:format("PollenServerModule: Accepting new connection.~n"),
+            env:verbose() andalso io:format("PollenTCPModule: Accepting new connection.~n"),
 
             %% Spawn a new Pid to handle server side connection
             inet:setopts(ClientSock, [{active, false}, {packet, 0}]),
@@ -41,7 +42,7 @@ server(ListenSock) ->
             %% Continue accepting new connections
             server(ListenSock);
         {error, Reason} ->
-            env:verbose() andalso io:format("PollenServerModule: Accept error: ~p.~n", [Reason]),
+            env:verbose() andalso io:format("PollenTCPModule: Accept error: ~p.~n", [Reason]),
             ok
     end.
 
@@ -70,11 +71,11 @@ handle(Socket) ->
 
                 handle(Socket);
             true ->
-                env:verbose() andalso io:format("PollenServerModule: Packet too large error (~wB).~n", [Size]),
+                env:verbose() andalso io:format("PollenTCPModule: Packet too large error (~wB).~n", [Size]),
                 gen_tcp:close(Socket)
             end;
         {error, closed} ->
-            env:verbose() andalso io:format("PollenServerModule: Client disconnected.~n"),
+            env:verbose() andalso io:format("PollenTCPModule: Client disconnected.~n"),
             exit(self()),
             
             ok

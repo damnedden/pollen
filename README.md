@@ -1,7 +1,7 @@
 pollen
 ============
 
-A simple OTP application to run a chat server capable of hosting multiple rooms, private messages and more!
+An OTP application to run a chat server capable of hosting multiple rooms, private messages and more.
 
 Build
 -------

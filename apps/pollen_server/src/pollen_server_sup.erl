@@ -32,16 +32,25 @@ init([]) ->
         period => 1
     },
 
-    PollenServer = #{
-        id => server,
-        start => {server, start_link, [4000]},
+    PollenDbModule = #{
+        id => pollen_db,
+        start => {db, start_link, [<<"ASIAY34FZKBOKMUTVV7A">>, <<"ASIAY34FZKBOKMUTVV7A">>, <<"pollen-dynamodb">>, <<"8000">>]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
-        modules => [server]
+        modules => [db]
     },
 
-    ChildSpecs = [PollenServer],
+    PollenTcpServer = #{
+        id => pollen_tcp_server,
+        start => {tcp, start_link, [4000]},
+        restart => permanent,
+        shutdown => 5000,
+        type => worker,
+        modules => [tcp]
+    },
+
+    ChildSpecs = [PollenDbModule, PollenTcpServer],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions

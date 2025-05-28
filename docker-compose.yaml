@@ -1,4 +1,3 @@
-# All services defined in our master contaienr
 services:
   pollen-server:
     image: ifiocco/image:pollen
@@ -8,5 +7,27 @@ services:
     mem_limit: 2048m
     mem_reservation: 512m
     tty: true
+    networks:
+      - dev
     volumes:
       - .:/var/www/pollen
+
+  pollen-dynamodb:
+    image: amazon/dynamodb-local
+    container_name: pollen-dynamodb
+    cpus: 3
+    restart: on-failure:3
+    mem_limit: 2048m
+    mem_reservation: 512m
+    ports:
+      - "8000:8000"
+    networks:
+      - dev
+    volumes:
+      - .:/var/www/pollen
+
+# Network
+networks:
+  dev:
+    driver: bridge
+
