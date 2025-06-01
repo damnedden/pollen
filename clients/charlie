@@ -1,0 +1,3 @@
+#!/bin/bash
+
+erl -noshell -sname charlie -eval "p:main([\"localhost\",\"4000\",\"Charlie\"])"

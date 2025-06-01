@@ -1,6 +1,6 @@
 services:
   pollen-server:
-    image: ifiocco/image:pollen
+    image: ifiocco/pollen
     container_name: pollen-server
     cpus: 3
     restart: on-failure:3
