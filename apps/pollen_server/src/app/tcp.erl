@@ -49,7 +49,6 @@ acceptor(ListenSock) ->
             ?ENV_SERVER_LOGS andalso io:format("PollenTCPModule: Accepted new connection~n"),
             
             %% Spawn a new Pid to handle server side connection
-            inet:setopts(ClientSock, [{active, once}, {packet, 0}]),
             Pid = spawn(?MODULE, handle_client, [ClientSock]),
             gen_tcp:controlling_process(ClientSock, Pid),
 
@@ -66,10 +65,15 @@ handle_client(Socket) -> loop(Socket).
 loop(Socket) ->
     inet:setopts(Socket, [{active, once}]),
     receive
+        {send, Response, From, Callback, CallbackData} ->
+            gen_tcp:send(Socket, utils:serialize(Response)),
+            From ! {Callback, CallbackData},
+            loop(Socket);
+
         {send, Response} ->
             gen_tcp:send(Socket, utils:serialize(Response)),
-
             loop(Socket);
+
         {tcp, Socket, Data} ->
             Bin = term_to_binary(Data),
             Size = byte_size(Bin),

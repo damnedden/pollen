@@ -3,8 +3,6 @@
 -export([handle/0]).
 
 handle() ->
-    io:format("PollenLoginModule: Pong ~p~n", [self()]),
-
-    self() ! {send, [{action, new_message}, {payload, [{message, "pong"}]}]},
+    pollen_channel_manager ! {unicast, self(), "pong"},
     
     ok.

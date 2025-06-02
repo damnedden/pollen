@@ -164,8 +164,6 @@ print_command_list() ->
     io:format("~nList of available commands:~n~n"),
     io:format("~-15s ~s~n", ["/help",       "-- Print again the list of commands"]),
     io:format("~-15s ~s~n", ["/list",       "-- List of all channels"]),
-    io:format("~-15s ~s~n", ["/all_users",  "-- List of all users online"]),
-    io:format("~-15s ~s~n", ["/users",      "-- List of users inside your channel"]),
     io:format("~-15s ~s~n", ["/close",      "-- Close the channel that you're in, if you own it."]),
     io:format("~-15s ~s~n", ["/ping",       "-- Ping the server"]),
     io:format("~-15s ~s~n", ["/channel",    "-- Create a new channel"]),
@@ -186,7 +184,6 @@ input_loop() ->
             leave_channel(),
             input_loop();
 
-        %% TO BE DONE
         "/pmessage" ->
             RecipientUsername = string:trim(io:get_line(standard_io, "Insert the user you intend to message: ")),
             Message = string:trim(io:get_line(standard_io, "Insert the message: ")),
@@ -195,9 +192,12 @@ input_loop() ->
 
         %% TO BE DONE
         "/invite" ->
-            %%all_user_list(),
+            %%all_?ENV_SERVER_LOGS(),
             input_loop();
 
+        "/ping" ->
+            ping(),
+            input_loop();
 
         "/join" ->
             ChannelName = string:trim(io:get_line(standard_io, "Insert channel name: ")),

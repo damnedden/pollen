@@ -9,12 +9,28 @@
 %% Channel and keep tracks of list of Clients [{Pid, Client}...]
 client_manager(ClientList) ->
     receive
+        %% Handle the switch of a channel
         {switch_channel, ClientPid, ChannelName} ->
             case get_client_by_pid(ClientList, ClientPid) of
                 {ok, Client} -> pollen_channel_manager ! {join_channel, ChannelName, Client};
                 ok -> ok
             end,
             
+            client_manager(ClientList);
+
+        %% Handle a new conversation
+        {new_private_conversation, SenderPid, RecipientUsername, Message} ->
+            case get_client_by_pid(ClientList, SenderPid) of
+                {ok, SenderClient} -> 
+                    case get_client_by_name(ClientList, RecipientUsername) of
+                        {ok, RecipientClient} ->
+                            channel:spawn_private_conversation(pollen_channel_manager, SenderClient, RecipientClient, Message);
+                        ok ->
+                            pollen_channel_manager ! {unicast, SenderPid, io_lib:format("User `~s` is currently not online.", [RecipientUsername])},
+                    end;
+                ok -> ok
+            end,
+
             client_manager(ClientList);
 
         {get_client, ClientPid, From} ->
@@ -79,8 +95,8 @@ get_client_by_pid(ClientList, ClientPid) ->
 random_color() ->
     ColorMap = #{
         1 => "\e[31m", 
-        2 => "\e[32m", 
-        3 => "\e[33m", 
+        2 => "\e[35m", 
+        3 => "\e[37m", 
         4 => "\e[36m",
         5 => "\e[34m"
     },
