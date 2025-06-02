@@ -1,7 +1,10 @@
-%%%-------------------------------------------------------------------
-%% @doc pollen public API
-%% @end
-%%%-------------------------------------------------------------------
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
 
 -module(pollen_server_app).
 

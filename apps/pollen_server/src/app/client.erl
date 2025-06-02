@@ -1,10 +1,19 @@
--module(client).
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
 
-%% Environment
+-module(client).
 -include("include/env.hrl").
 
-%% Export
-- export([client_manager/1, spawn_client/2]).
+%% Public
+- export([
+    client_manager/1, 
+    spawn_client/2
+]).
 
 %% Channel and keep tracks of list of Clients [{Pid, Client}...]
 client_manager(ClientList) ->
@@ -23,22 +32,27 @@ client_manager(ClientList) ->
             case get_client_by_pid(ClientList, SenderPid) of
                 {ok, SenderClient} -> 
                     case get_client_by_name(ClientList, RecipientUsername) of
-                        {ok, RecipientClient} ->
-                            channel:spawn_private_conversation(pollen_channel_manager, SenderClient, RecipientClient, Message);
-                        ok ->
-                            pollen_channel_manager ! {unicast, SenderPid, io_lib:format("User `~s` is currently not online.", [RecipientUsername])},
+                        {ok, RecipientClient} when RecipientClient#client.pid =:= SenderClient#client.pid -> channel:unicast(SenderPid, "You can't private message yourself.");
+                        {ok, RecipientClient} -> channel:spawn_private_conversation(pollen_channel_manager, SenderClient, RecipientClient, Message);
+                        ok -> channel:unicast(SenderPid, io_lib:format("User `~s` is currently not online.", [RecipientUsername]))
                     end;
                 ok -> ok
             end,
 
             client_manager(ClientList);
 
-        {get_client, ClientPid, From} ->
-            client_list:callback(ClientPid, ClientList),
-            client_manager(ClientList);
+        %% Handle a new invite
+        {new_invite, SenderPid, RecipientUsername} ->
+            case get_client_by_pid(ClientList, SenderPid) of
+                {ok, SenderClient} -> 
+                    case get_client_by_name(ClientList, RecipientUsername) of
+                        {ok, RecipientClient} when RecipientClient#client.pid =:= SenderClient#client.pid -> channel:unicast(SenderPid, "You can't invite yourself.");
+                        {ok, RecipientClient} -> pollen_channel_manager ! {invite, SenderClient, RecipientClient};
+                        ok -> channel:unicast(SenderPid, io_lib:format("User `~s` is currently not online.", [RecipientUsername]))
+                    end;
+                ok -> ok
+            end,
 
-        {ClientPid, get_Client_list} ->
-            client_list:callback(ClientPid, ClientList),
             client_manager(ClientList);
 
         %% Add a new client to the list
@@ -49,7 +63,7 @@ client_manager(ClientList) ->
                     erlang:monitor(process, ClientPid),
                     pollen_channel_manager ! {join_channel, ?ENV_GLOBAL_CH_NAME, Client},
                     login:callback(ClientPid, ClientList2, Client#client.name),
-                    io:format("PollenClientModule: Spawning new client ~p with PID ~p~n", [Client#client.name, ClientPid]),
+                    ?ENV_SERVER_LOGS andalso io:format("PollenClientModule: Spawning new client ~p with PID ~p~n", [Client#client.name, ClientPid]),
                     client_manager(ClientList2);
 
                 error ->
@@ -70,7 +84,7 @@ client_manager(ClientList) ->
 %% Add Clients to the manager
 client_list_add(Client, ClientList) ->
     case get_client_by_name(ClientList, Client#client.name) of
-        {ok, Found} ->
+        {ok, _Found} ->
             Client#client.pid ! {tcp_exception, client_already_exist},
             error;
         ok ->

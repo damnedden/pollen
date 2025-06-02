@@ -1,3 +1,11 @@
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
+
 -module(login).
 
 -export([handle/1, callback/3]).
@@ -12,7 +20,7 @@ handle([{username, Username}]) ->
     %% Spawn a new client
     client:spawn_client(self(), Username).
 
-callback(ClientPid, ClientList, Username) ->
+callback(ClientPid, _ClientList, Username) ->
     {ok, Vsn} = application:get_key(pollen_server, vsn),
 
     %% Convert it to a user list for printing

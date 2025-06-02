@@ -6,21 +6,9 @@ services:
     restart: on-failure:3
     mem_limit: 2048m
     mem_reservation: 512m
-    tty: true
-    networks:
-      - dev
-    volumes:
-      - .:/var/www/pollen
-
-  pollen-dynamodb:
-    image: amazon/dynamodb-local
-    container_name: pollen-dynamodb
-    cpus: 3
-    restart: on-failure:3
-    mem_limit: 2048m
-    mem_reservation: 512m
     ports:
-      - "8000:8000"
+      - "4000:4000"
+    tty: true
     networks:
       - dev
     volumes:

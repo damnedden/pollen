@@ -1,14 +1,18 @@
-%%%-------------------------------------------------------------------
-%% @doc pollen top level supervisor.
-%% @end
-%%%-------------------------------------------------------------------
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
 
 -module(pollen_server_sup).
 
 -behaviour(supervisor).
 
--export([start_link/0]).
+-include("include/env.hrl").
 
+-export([start_link/0]).
 -export([init/1]).
 
 -define(SERVER, ?MODULE).
@@ -32,25 +36,16 @@ init([]) ->
         period => 1
     },
 
-    PollenDbModule = #{
-        id => pollen_db,
-        start => {db, start_link, [<<"ASIAY34FZKBOKMUTVV7A">>, <<"ASIAY34FZKBOKMUTVV7A">>, <<"pollen-dynamodb">>, <<"8000">>]},
-        restart => permanent,
-        shutdown => 5000,
-        type => worker,
-        modules => [db]
-    },
-
     PollenTcpServer = #{
         id => pollen_tcp_server,
-        start => {tcp, start_link, [4000]},
+        start => {tcp, start_link, [?ENV_PORT]},
         restart => permanent,
         shutdown => 5000,
         type => worker,
         modules => [tcp]
     },
 
-    ChildSpecs = [PollenDbModule, PollenTcpServer],
+    ChildSpecs = [PollenTcpServer],
     {ok, {SupFlags, ChildSpecs}}.
 
 %% internal functions

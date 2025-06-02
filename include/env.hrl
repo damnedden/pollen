@@ -1,6 +1,12 @@
+%% Hosting settings
+-define(ENV_HOST, "localhost").
+-define(ENV_PORT, 4000).
+-define(ENV_MAX_PCK_SIZE, 2000).
+
+%% Miscellaneous
+-define(ENV_SERVER_LOGS, true).
 -define(ENV_GLOBAL_CH_NAME, "(global)").
 -define(ENV_CH_ID_PREFIX, "ch_").
--define(ENV_SERVER_LOGS, true).
 
 %% Client record
 -record(client, {

@@ -1,14 +1,28 @@
--module(channel).
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
 
+-module(channel).
 -include("include/env.hrl").
 
-%% Export
-- export([channel_manager/1, spawn_channel/3, spawn_channel/4, spawn_global_channel/1, spawn_private_conversation/4]).
+%% Public
+- export([channel_manager/1, 
+          spawn_channel/3, 
+          spawn_channel/4, 
+          spawn_global_channel/1, 
+          spawn_private_conversation/4
+        ]).
+
+- export([unicast/2]).
 
 %% Instantiate the channel manager
 channel_manager(State = {ChannelList, ClientsMap}) ->
     receive
-        %% Broadcast to the channel the pid is currently connected
+        %% Handles a new broadcast request
         {broadcast, ClientPid, Message} ->
             case get_channel_by_client_pid(ClientPid, ClientsMap, ChannelList) of
                 {ok, Channel} ->
@@ -20,9 +34,32 @@ channel_manager(State = {ChannelList, ClientsMap}) ->
             
             channel_manager(State);
 
-        %% Unicast to the client
+        %% Handles a new unicast request
         {unicast, ClientPid, Message} ->
             ClientPid ! {send, [{action, new_message}, {payload, [{message, Message}]}]},    
+            channel_manager(State);
+
+        %% Handles a new invite request
+        {invite, SenderClient=#client{pid=SenderPid}, #client{pid=RecipientPid, name=RecipientName}} ->
+            case get_channel_by_client_pid(SenderPid, ClientsMap, ChannelList) of
+                {ok, #channel{whitelist=Whitelist}} when Whitelist =:= [] -> unicast(SenderPid, "Channel is already public, use /join to switch in between channels.");
+                {ok, Channel = #channel{owner=Owner, pid=ChannelPid, whitelist=Whitelist}} when Owner =:= SenderPid ->
+                    send_invite_notif(RecipientPid, "Hey there! Come and join me with /join", SenderClient, Channel),
+                    broadcast(Channel, io_lib:format("`~s` was invited to join the channel", [RecipientName])),
+                    
+                    %% Update whitelist
+                    NewWhitelist = [RecipientPid | Whitelist],
+                    NewChannel   = Channel#channel{whitelist=NewWhitelist},
+                    RemovedChannelList = ch_list_remove(ChannelPid, ChannelList),
+
+                    case ch_list_add(NewChannel, RemovedChannelList) of
+                        {ok, ChannelList2} -> channel_manager({ChannelList2, ClientsMap});
+                        ok -> channel_manager(State)
+                    end;    
+
+                {ok, _Channel} -> unicast(SenderPid, "Can't invite in a channel you dont own!");
+                error -> send_disconnected_message(SenderPid)
+            end,
             channel_manager(State);
 
         %% User join a new channel
@@ -37,7 +74,7 @@ channel_manager(State = {ChannelList, ClientsMap}) ->
                                 {ok, #channel{pid=OldChannelPid}} when OldChannelPid =/= Channel#channel.pid -> 
                                     OldChannelPid ! {leave, Client};
                                 {ok, #channel{pid=OldChannelPid, name=OldChannelName}} when OldChannelPid =:= Channel#channel.pid -> 
-                                    self() ! {unicast, ClientPid, io_lib:format("You are already in `~s`!", [OldChannelName])},
+                                    unicast(ClientPid, io_lib:format("You are already in `~s`!", [OldChannelName])),
                                     channel_manager(State);
                                 error -> ok
                             end,
@@ -46,11 +83,11 @@ channel_manager(State = {ChannelList, ClientsMap}) ->
                             Channel#channel.pid ! {join, Client},
                             channel_manager({ChannelList, NewClientsMap});
                         false ->
-                            self() ! {unicast, ClientPid, io_lib:format("Channel `~s` is private, ask the owner for an invite with /invite.", [ChannelName])},
+                            unicast(ClientPid, io_lib:format("Channel `~s` is private, ask the owner for an invite with /invite.", [ChannelName])),
                             channel_manager(State)
                     end;
                 error ->
-                    self() ! {unicast, ClientPid, io_lib:format("Channel `~s` not found.", [ChannelName])},
+                    unicast(ClientPid, io_lib:format("Channel `~s` not found.", [ChannelName])),
                     channel_manager(State)
             end;
 
@@ -67,10 +104,10 @@ channel_manager(State = {ChannelList, ClientsMap}) ->
             channel_manager(State);
 
         %% Request to close channel coming from client
-        {close_channel, #client{pid=ClientPid}} ->
+        {close_channel, ClientPid} ->
             case get_channel_by_client_pid(ClientPid, ClientsMap, ChannelList) of
                 {ok, #channel{owner=Owner, pid=ChannelPid}} when Owner =:= ClientPid -> ChannelPid !{terminate, user_requested_closing};
-                {ok, #channel{name=ChannelName}} -> self() ! {unicast, ClientPid, io_lib:format("Channel `~s` cant be closed.", [ChannelName])};
+                {ok, #channel{name=ChannelName}} -> unicast(ClientPid, io_lib:format("Channel `~s` cant be closed.", [ChannelName]));
                 error -> send_disconnected_message(ClientPid)
             end,
             channel_manager(State);
@@ -123,19 +160,19 @@ channel_manager(State = {ChannelList, ClientsMap}) ->
         
         %% List of all channels server side
         {list_channels} ->
-            io:format("PollenChannelModule: ~p~n", [ChannelList]),
+            ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: ~p~n", [ChannelList]),
             channel_manager(State);
 
         %% Channel terminated
         {'DOWN', _MonitorRef, process, ChannelPid, Reason} ->
-            io:format("PollenChannelModule: Channel ~p terminated abruptely ~p ~n", [ChannelPid, Reason]),
+            ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: Channel ~p terminated abruptely ~p ~n", [ChannelPid, Reason]),
             NewChannelList = ch_list_remove(ChannelPid, ChannelList),
             
             %% If its the global channel down attempt a restart
             case get_channel_by_name(NewChannelList, ?ENV_GLOBAL_CH_NAME) of
                 {ok, _Channel} -> ok;
                 error ->
-                    io:format("PollenChannelModule: Attempting to restart global channel~n"),
+                    ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: Attempting to restart global channel~n"),
                     spawn_global_channel(self())
             end,   
 
@@ -157,7 +194,7 @@ channel_loop(Channel) ->
         {join, #client{name=Name, pid=ClientPid, color=ClientColor}} ->
             pg:join(Channel#channel.id, ClientPid),
             timer:sleep(10),
-            pollen_channel_manager ! {unicast, ClientPid, io_lib:format("\e[32mConnected to `~s` channel!\e[0m", [Channel#channel.name])},
+            unicast(ClientPid, io_lib:format("\e[32mConnected to `~s` channel!\e[0m", [Channel#channel.name])),
             broadcast(Channel, io_lib:format("~s~s joined the channel.\e[0m", [ClientColor, Name])),
             channel_loop(Channel);
 
@@ -171,15 +208,14 @@ channel_loop(Channel) ->
             ok;
 
         {terminate, Reason} ->
-            broadcast(Channel, io_lib:format("\e[33mThe owner of this channel terminated the session, please join a channel with /join.\e[0m", [])),
-            io:format("PollenChannelModule: ~s, terminating channel.~n", [Reason]),
+            broadcast(Channel, io_lib:format("\e[33mThis channel terminated its session.\e[0m", [])),
+            ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: ~s, terminating channel.~n", [Reason]),
             ok;
         
         _Other ->
             channel_loop(Channel)
     end.
 
-%% Registry for channels
 ch_list_add(NewChannel, ChannelList) ->
     case get_channel_by_name(ChannelList, NewChannel#channel.name) of
         {ok, _Channel} ->
@@ -191,17 +227,10 @@ ch_list_add(NewChannel, ChannelList) ->
 
 ch_list_remove(ChannelPid, ChannelList) -> lists:filter(fun(C) -> C#channel.pid =/= ChannelPid end, ChannelList).
 
-%% Channel function for each
 channel(Channel) ->
-    io:format("PollenChannelModule: Spawning new channel ~p with PID ~p~n", [Channel#channel.name, self()]),
-    pg:join(Channel#channel.id, self()),
+    ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: Spawning new channel ~p with PID ~p~n", [Channel#channel.name, self()]),
     NewChannel = Channel#channel{pid = self()},
     channel_loop(NewChannel).
-
-%% Broadcast a message to all processes of a group 
-broadcast(Channel, Message) ->
-    Children = pg:get_members(Channel#channel.id),
-    lists:map(fun(C) -> pollen_channel_manager ! {unicast, C, Message} end, Children).
 
 %%%% -------------------------------------------------------------------
 %%% Helper
@@ -233,8 +262,15 @@ get_client_in_clientmap(ClientPid, ClientsMap) ->
 is_client_whitelisted([], _ClientPid) -> true;
 is_client_whitelisted(Whitelist, ClientPid) ->  lists:member(ClientPid, Whitelist).
 get_list_visible_channels_for_pid(ClientPid, ChannelList) -> lists:filter(fun(Channel) -> is_client_whitelisted(Channel#channel.whitelist, ClientPid) end, ChannelList).
-send_disconnected_message(ClientPid) -> pollen_channel_manager ! {unicast, ClientPid, "You are not connected to any channel"}.
-send_invite_notif(ClientPid, Message) -> pollen_channel_manager ! {unicast, ClientPid, Message}.
+
+%%%% -------------------------------------------------------------------
+%%% Send messages to clients
+%%% -------------------------------------------------------------------
+
+broadcast(Channel, Message) -> lists:map(fun(C) -> pollen_channel_manager ! {unicast, C, Message} end, pg:get_members(Channel#channel.id)).
+unicast(ClientPid, Message) -> pollen_channel_manager ! {unicast, ClientPid, Message}.
+send_disconnected_message(ClientPid) -> unicast(ClientPid, "You are not connected to any channel").
+send_invite_notif(ClientPid, Message, #client{name=SenderName}, #channel{name=ChannelName}) -> unicast(ClientPid, io_lib:format("\e[32m~s invited you to hop on `~s`~n`~s`\e[0m", [SenderName, ChannelName, Message])).
 
 %%%% -------------------------------------------------------------------
 %%% Channel spawning
@@ -263,7 +299,7 @@ spawn_private_conversation(ChannelManagerPid, SenderClient, RecipientClient, Mes
     receive
         {close_channel_callback, ok} ->
             spawn_channel(ChannelManagerPid, SenderPid, PrivateChannelName, [SenderPid, RecipientPid]),
-            send_invite_notif(SenderPid, io_lib:format("\e[32mNew private conversation channel `~s` created\e[0m", [PrivateChannelName])),
-            send_invite_notif(RecipientPid, io_lib:format("\e[32m~s invited you to join him in `~s`~n`~s`\e[0m", [SenderName, PrivateChannelName, Message]))
+            unicast(SenderPid, io_lib:format("\e[32mNew private conversation channel `~s` created\e[0m", [PrivateChannelName])),
+            send_invite_notif(RecipientPid, Message, SenderClient, #channel{name=PrivateChannelName})
     end.
 

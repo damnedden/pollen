@@ -1,5 +1,12 @@
-%% Client side of the application
--module(p).
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
+
+-module(pollen_client).
 
 -export([main/1]).
 -export([ping/0,ch_list/0]).
@@ -124,6 +131,12 @@ new_channel_private_with_invite(RecipientUsername, Message) ->
     client ! {send, Request},
     ok.
 
+invite_channel(RecipientUsername) ->
+    Action = ch_invite,
+    Request = [{action, Action}, {payload, [{recipient, RecipientUsername}]}],
+    client ! {send, Request},
+    ok.
+
 close_channel() ->
     Action = ch_close,
     Request = [{action, Action}, {payload, []}],
@@ -164,10 +177,7 @@ print_command_list() ->
     io:format("~nList of available commands:~n~n"),
     io:format("~-15s ~s~n", ["/help",       "-- Print again the list of commands"]),
     io:format("~-15s ~s~n", ["/list",       "-- List of all channels"]),
-    io:format("~-15s ~s~n", ["/all_users",  "-- List of all users online"]),
-    io:format("~-15s ~s~n", ["/users",      "-- List of users inside your channel"]),
     io:format("~-15s ~s~n", ["/close",      "-- Close the channel that you're in, if you own it."]),
-    io:format("~-15s ~s~n", ["/ping",       "-- Ping the server"]),
     io:format("~-15s ~s~n", ["/channel",    "-- Create a new channel"]),
     io:format("~-15s ~s~n", ["/invite",     "-- Add users to your private channel, if you own it"]),
     io:format("~-15s ~s~n", ["/pchannel",   "-- Create a new private channel"]),
@@ -195,9 +205,9 @@ input_loop() ->
 
         %% TO BE DONE
         "/invite" ->
-            %%all_user_list(),
+            RecipientUsername = string:trim(io:get_line(standard_io, "Insert user to invite: ")),
+            invite_channel(RecipientUsername),
             input_loop();
-
 
         "/join" ->
             ChannelName = string:trim(io:get_line(standard_io, "Insert channel name: ")),

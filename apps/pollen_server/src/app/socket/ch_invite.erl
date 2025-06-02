@@ -6,10 +6,10 @@
 %%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
 %%%
 
--module(ch_join).
+-module(ch_invite).
 
 -export([handle/1]).
 
-handle([{channel_name, ChannelName}]) ->
-    pollen_client_manager ! {switch_channel, self(), ChannelName},
+handle([{recipient, RecipientName}]) ->
+    pollen_client_manager ! {new_invite, self(), RecipientName},
     ok.
