@@ -181,7 +181,8 @@ print_command_list() ->
     io:format("~-15s ~s~n", ["/channel",    "-- Create a new channel"]),
     io:format("~-15s ~s~n", ["/invite",     "-- Add users to your private channel, if you own it"]),
     io:format("~-15s ~s~n", ["/pchannel",   "-- Create a new private channel"]),
-    io:format("~-15s ~s~n", ["/pchannel",   "-- Leave current channel and return to (global)"]),
+    io:format("~-15s ~s~n", ["/pmessage",   "-- Private message another user, inside a private channel"]),
+    io:format("~-15s ~s~n", ["/leave",      "-- Leave current channel and return to (global)"]),
     io:format("~-15s ~s~n", ["/quit",       "-- Exit chat"]).
 
 input_loop() ->

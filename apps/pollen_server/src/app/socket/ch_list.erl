@@ -10,6 +10,7 @@
 
 -export([handle/0, callback/2]).
 
+- spec handle() -> no_return().
 handle() ->
     pollen_channel_manager ! {list_channels, self()},
     ok.

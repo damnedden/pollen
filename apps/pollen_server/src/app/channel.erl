@@ -19,7 +19,13 @@
 
 - export([unicast/2]).
 
+-type client() :: #client{}.
+-type channel() :: #channel{}.
+-type clients_map() :: #{pid() => client()}.
+-type channel_list() :: [channel()].
+
 %% Instantiate the channel manager
+-spec channel_manager({channel_list(), clients_map()}) -> ok | no_return().
 channel_manager(State = {ChannelList, ClientsMap}) ->
     receive
         %% Handles a new broadcast request
@@ -183,6 +189,7 @@ channel_manager(State = {ChannelList, ClientsMap}) ->
     end.
 
 %% Loop for requests to process
+-spec channel_loop(channel()) -> ok | no_return().
 channel_loop(Channel) ->
     receive
         %% Broadcast to all members
@@ -216,6 +223,7 @@ channel_loop(Channel) ->
             channel_loop(Channel)
     end.
 
+-spec ch_list_add(channel(), channel_list()) -> ok | {ok, channel_list()}.
 ch_list_add(NewChannel, ChannelList) ->
     case get_channel_by_name(ChannelList, NewChannel#channel.name) of
         {ok, _Channel} ->
@@ -225,8 +233,11 @@ ch_list_add(NewChannel, ChannelList) ->
             {ok, [NewChannel | ChannelList]}
     end.
 
+
+-spec ch_list_remove(pid(), channel_list()) -> channel_list().
 ch_list_remove(ChannelPid, ChannelList) -> lists:filter(fun(C) -> C#channel.pid =/= ChannelPid end, ChannelList).
 
+-spec channel(channel()) -> no_return().
 channel(Channel) ->
     ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: Spawning new channel ~p with PID ~p~n", [Channel#channel.name, self()]),
     NewChannel = Channel#channel{pid = self()},
@@ -236,12 +247,14 @@ channel(Channel) ->
 %%% Helper
 %%% -------------------------------------------------------------------
 
+-spec get_channel_by_name(channel_list(), string()) -> error | {ok, channel()}.
 get_channel_by_name(ChannelList, ChannelName) -> 
     case lists:filter(fun(C) -> C#channel.name == ChannelName end, ChannelList) of
         [First | _] -> {ok, First};
         [] -> error
     end.
 
+-spec get_channel_by_client_pid(pid(), clients_map(), channel_list()) -> error | {ok, channel()}.
 get_channel_by_client_pid(ClientPid, ClientsMap, ChannelList) ->
     case maps:is_key(ClientPid, ClientsMap) of
         true ->
@@ -253,39 +266,54 @@ get_channel_by_client_pid(ClientPid, ClientsMap, ChannelList) ->
         false -> error
     end.
 
+-spec get_client_in_clientmap(pid(), clients_map()) -> error | client().
 get_client_in_clientmap(ClientPid, ClientsMap) ->
     case maps:get(ClientPid, ClientsMap, undefined) of
         undefined -> error;
         Client -> Client
     end.
 
+-spec is_client_whitelisted([pid()], pid()) -> true | false.
 is_client_whitelisted([], _ClientPid) -> true;
 is_client_whitelisted(Whitelist, ClientPid) ->  lists:member(ClientPid, Whitelist).
+
+-spec get_list_visible_channels_for_pid(pid(), channel_list()) -> channel_list().
 get_list_visible_channels_for_pid(ClientPid, ChannelList) -> lists:filter(fun(Channel) -> is_client_whitelisted(Channel#channel.whitelist, ClientPid) end, ChannelList).
 
 %%%% -------------------------------------------------------------------
 %%% Send messages to clients
 %%% -------------------------------------------------------------------
 
+-spec broadcast(channel(), string()) -> no_return().
 broadcast(Channel, Message) -> lists:map(fun(C) -> pollen_channel_manager ! {unicast, C, Message} end, pg:get_members(Channel#channel.id)).
+
+-spec unicast(pid(), string()) -> no_return().
 unicast(ClientPid, Message) -> pollen_channel_manager ! {unicast, ClientPid, Message}.
+
+-spec send_disconnected_message(pid()) -> no_return().
 send_disconnected_message(ClientPid) -> unicast(ClientPid, "You are not connected to any channel").
+
+-spec send_invite_notif(pid(), string(), client(), channel()) -> no_return().
 send_invite_notif(ClientPid, Message, #client{name=SenderName}, #channel{name=ChannelName}) -> unicast(ClientPid, io_lib:format("\e[32m~s invited you to hop on `~s`~n`~s`\e[0m", [SenderName, ChannelName, Message])).
 
 %%%% -------------------------------------------------------------------
 %%% Channel spawning
 %%% -------------------------------------------------------------------
 
+-spec spawn_channel(pid(), pid(), string(), [pid()]) -> no_return().
 spawn_channel(ChannelManagerPid, ClientPid, Name, Whitelist) ->
     Global = #channel{id=?ENV_CH_ID_PREFIX ++ Name, name=Name, owner=ClientPid, whitelist=Whitelist},
     ChannelManagerPid ! {register, Global}.
 
+-spec spawn_channel(pid(), pid(), string()) -> no_return().
 spawn_channel(ChannelManagerPid, ClientPid, Name) ->
     spawn_channel(ChannelManagerPid, ClientPid, Name, []).
 
+-spec spawn_global_channel(pid()) -> no_return().
 spawn_global_channel(ChannelManagerPid) ->
     spawn_channel(ChannelManagerPid, ChannelManagerPid, ?ENV_GLOBAL_CH_NAME).
 
+-spec spawn_private_conversation(pid(), client(), client(), string()) -> no_return().
 spawn_private_conversation(ChannelManagerPid, SenderClient, RecipientClient, Message) ->
     SenderName = SenderClient#client.name,
     SenderPid = SenderClient#client.pid,

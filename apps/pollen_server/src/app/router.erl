@@ -11,6 +11,7 @@
 -export([dispatch/1]).
 
 %% Dispatch the request
+-spec dispatch({{action, atom()}, {payload, any()}}) -> no_return().
 dispatch([{action, Action}, {payload, Payload}]) ->
     case Action of
         send_msg                -> send_msg:handle(Payload);

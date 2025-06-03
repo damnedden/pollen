@@ -20,11 +20,11 @@ You will have to spin up the server container, this will automatically create a 
 
     $ docker compose up -d
 
-Your pollen server is live and ready to accept connections at
+Your pollen server is now live and ready to accept connections at
 
     $ 0.0.0.0:4000
 
-Testing (in Docker)
+Usage (in Docker)
 -------
 
 To test the application in an isolated environment, you can access the server container's shell. It's recommended to open multiple terminal sessions to simulate interactions between different clients.
@@ -38,11 +38,64 @@ Once inside, compile the client module and start an Erlang shell to connect:
 
 For convenience, you’ll find three pre-configured clients inside the **/clients/** directory. After compilation, use them to test the various features of the server.
 
+You will find a full list of available commands with /join
+
+🚀 MIT Server Team Challenge Instructions
+-------
+
+Instructions on how to run the challenge.
+
+### Erlang project setup 
+
+First of all let's boot the server with 
+
+    $ docker compose up -d
+
+There's no need to build anything manually, the release comes with the container through rebar3 release, after that we compile the client with
+
+    $ erlc pollen_client.erl
+
+And then we're ready to go.
+
+To test the API effectively, it's recommended to open multiple terminals to simulate different TCP/IP clients communicating simultaneously.
+
+### Accept multiple TCP/IP client connections at the same time
+
+To test concurrent connections, use the preconfigured clients Alice and Bob:
+
+    $ ./clients/alice   # in terminal 1
+    $ ./clients/bob     # in terminal 2
+
+### Handle rooms
+
+The following commands test the various chat room features. Note: after typing a command, you'll be prompted for any necessary arguments.
+
+    $ > /channel
+    $ > /close
+    $ > /list
+    $ > /join
+    $ > /leave
+    $ > <message>
+
+### Send private messages
+
+To send a private message to another user:
+
+    $ > /pmessage
+
+### Handle private rooms
+
+To test and handle a private room, we can use the following commands:
+
+    $ > /pchannel
+    $ > /invite
+
+We can verify that some rooms are hidden from others by running the /list command from a different terminal.
+
 Hosting
 -------
 
-By default your pollen server will be hosted on port **4000** but you can configure this and other options under **/includes/env.hrl**. You will also have to
-modify the port inside the docker-compose.yaml and rebuild the application with **rebar3 release**
+By default your pollen server will be hosted on port **4000** but you can configure this and other options under **/includes/env.hrl**. Make sure to change the port inside the docker-compose.yaml aswell
 
 Your clients will be able to:
 

@@ -21,6 +21,7 @@
 ]).
 
 %% Initial link called from supervisor
+- spec start_link(integer()) -> {ok, pid()} | {error, any()}.
 start_link(Port) ->
     ?ENV_SERVER_LOGS andalso io:format("Booting PollenTCPModule..."),
 
@@ -49,6 +50,7 @@ start_link(Port) ->
     end.
 
 %% Start multiple workers for each TCP
+- spec acceptor(any()) -> ok | no_return().
 acceptor(ListenSock) ->
     case gen_tcp:accept(ListenSock) of
         {ok, ClientSock} ->
@@ -66,8 +68,10 @@ acceptor(ListenSock) ->
     end.
 
 %% TCP for each client node
+- spec handle_client(any()) -> no_return().
 handle_client(Socket) -> loop(Socket).
 
+- spec loop(any()) -> ok | no_return().
 loop(Socket) ->
     inet:setopts(Socket, [{active, once}]),
     receive

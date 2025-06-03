@@ -15,7 +15,11 @@
     spawn_client/2
 ]).
 
+-type client() :: #client{}.
+-type client_list() :: [client()].
+
 %% Channel and keep tracks of list of Clients [{Pid, Client}...]
+-spec client_manager(client_list()) -> no_return().
 client_manager(ClientList) ->
     receive
         %% Handle the switch of a channel
@@ -82,6 +86,7 @@ client_manager(ClientList) ->
     end.
 
 %% Add Clients to the manager
+-spec client_list_add(client(), client_list()) -> {ok, client_list()} | error.
 client_list_add(Client, ClientList) ->
     case get_client_by_name(ClientList, Client#client.name) of
         {ok, _Found} ->
@@ -92,20 +97,24 @@ client_list_add(Client, ClientList) ->
     end.
 
 %% Remove Clients from the manager
+-spec client_list_remove(pid(), client_list()) -> client_list().
 client_list_remove(ClientPid, ClientList) -> lists:filter(fun(U) -> U#client.pid =/= ClientPid end, ClientList).
 
+-spec get_client_by_name(client_list(), string()) -> {ok, client()} | ok.
 get_client_by_name(ClientList, ClientName) -> 
     case lists:filter(fun(U) -> U#client.name == ClientName end, ClientList) of
         [First | _] -> {ok, First};
         [] -> ok
     end.
 
+-spec get_client_by_pid(client_list(), pid()) -> {ok, client()} | ok.
 get_client_by_pid(ClientList, ClientPid) -> 
     case lists:filter(fun(U) -> U#client.pid == ClientPid end, ClientList) of
         [First | _] -> {ok, First};
         [] -> ok
     end.
 
+-spec random_color() -> string().
 random_color() ->
     ColorMap = #{
         1 => "\e[31m", 
@@ -121,6 +130,7 @@ random_color() ->
 %%% Client spawning
 %%% -------------------------------------------------------------------
 
+-spec spawn_client(pid(), string()) -> no_return().
 spawn_client(ClientPid, Name) ->
     Client = #client{name=Name, pid=ClientPid, color=random_color()},
     pollen_client_manager ! {add, Client}.
