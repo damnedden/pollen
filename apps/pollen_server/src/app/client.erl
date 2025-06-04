@@ -85,6 +85,10 @@ client_manager(ClientList) ->
             client_manager(ClientList2)
     end.
 
+%%%% -------------------------------------------------------------------
+%%% Helper
+%%% -------------------------------------------------------------------=
+
 %% Add Clients to the manager
 -spec client_list_add(client(), client_list()) -> {ok, client_list()} | error.
 client_list_add(Client, ClientList) ->

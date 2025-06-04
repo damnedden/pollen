@@ -1,3 +1,11 @@
+%%% -*- erlang -*-
+%%%
+%%% This file is part of pollen released under the Apache 2 license.
+%%% See the NOTICE for more information.
+%%%
+%%% Copyright (c) 2025-2026, Daniele Fiore <daniele.fiore.work1+person@gmail.com>
+%%%
+
 %% Hosting settings
 -define(ENV_HOST, "localhost").
 -define(ENV_PORT, 4000).

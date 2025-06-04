@@ -215,7 +215,7 @@ channel_loop(Channel) ->
             ok;
 
         {terminate, Reason} ->
-            broadcast(Channel, io_lib:format("\e[33mThis channel terminated its session.\e[0m", [])),
+            broadcast(Channel, io_lib:format("\e[33mThis channel terminated its session, please join a new one with /join.\e[0m", [])),
             ?ENV_SERVER_LOGS andalso io:format("PollenChannelModule: ~s, terminating channel.~n", [Reason]),
             ok;
         

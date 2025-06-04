@@ -8,7 +8,7 @@
 
 {application, pollen_server, [
     {description, "An OTP application for a simple-chat server, complete with a functional client."},
-    {vsn, "0.2.2"},
+    {vsn, "0.2.3"},
     {registered, []},
     {mod, {pollen_server_app, []}},
     {applications, [

@@ -11,7 +11,6 @@
 -export([main/1]).
 -export([ping/0,ch_list/0]).
 
-%% Main function called at the run
 main(Args) ->
     start_client(Args),
     ok.
@@ -82,7 +81,6 @@ loop(Sock) ->
 
 %% ============================================
 
-%% Dispatch actions
 dispatch([{action, Action}, {payload, Payload}]) ->
     case Action of
         new_message -> 
@@ -171,7 +169,9 @@ ping() ->
 unserialize(Data) -> binary_to_term(list_to_binary(Data)).
 serialize(Request) -> term_to_binary(Request).
 
-%% ============= Client Side =============
+%%%% -------------------------------------------------------------------
+%%% Terminal
+%%% -------------------------------------------------------------------
 
 print_command_list() ->
     io:format("~nList of available commands:~n~n"),
@@ -197,14 +197,12 @@ input_loop() ->
             leave_channel(),
             input_loop();
 
-        %% TO BE DONE
         "/pmessage" ->
             RecipientUsername = string:trim(io:get_line(standard_io, "Insert the user you intend to message: ")),
             Message = string:trim(io:get_line(standard_io, "Insert the message: ")),
             new_channel_private_with_invite(RecipientUsername, Message),
             input_loop();
 
-        %% TO BE DONE
         "/invite" ->
             RecipientUsername = string:trim(io:get_line(standard_io, "Insert user to invite: ")),
             invite_channel(RecipientUsername),
@@ -237,6 +235,12 @@ input_loop() ->
             input_loop();
         
         _ ->
-            send_msg(Choice),
+            Message = string:trim(Choice),
+            case Message of
+                [] -> io:format("Message not sent, write something.~n"); 
+                _ when length(Message) > 300 -> io:format("Message not sent, max allowed characters reached (300).~n");
+                _ -> send_msg(Message)
+            end,
+            
             input_loop()
     end.
